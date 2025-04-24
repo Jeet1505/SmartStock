@@ -20,27 +20,26 @@ st.set_page_config(page_title="SmartStock - AI Investment Agent", page_icon="�
 # Custom CSS for UI
 st.markdown(
     """
-    <style>
+   <style>
     .main {
         background-color: #f0f2f6;
     }
     .stButton>button {
         background-color: #4CAF50;
         color: white;
-        font-size: 18px;
-        border-radius: 10px;
-        padding: 10px 24px;
-        margin: 10px 0px;
+        border-radius: 5px;
+        padding: 8px 16px;
     }
     .stButton>button:hover {
         background-color: #45a049;
     }
     .stTextInput>div>div>input {
         background-color: #ffffff;
-        padding: 10px;
-        border-radius: 10px;
+        padding: 8px;
+        border-radius: 5px;
     }
-    </style>
+</style>
+
     """,
     unsafe_allow_html=True
 )
@@ -96,11 +95,11 @@ else:
 
     with col1:
         if st.button("📈 Stock Comparison (Module 1)"):
-            st.switch_page("module1_stock_compare.py")
+            st.switch_page("module1.py")
 
     with col2:
         if st.button("🤖 Stock Chatbot (Module 2)"):
-            st.switch_page("module2_stock_chitchat.py")
+            st.switch_page("module2.py")
 
     add_vertical_space(2)
     if st.button("🚪 Logout"):

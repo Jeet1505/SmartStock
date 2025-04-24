@@ -1,8 +1,8 @@
 """
 Author       : Jeet
 Date         : 2025-03-17
-Version      : 2.0 (Finnhub Edition)
-Description  : AI Investment Agent to compare stock performance using Finnhub API and generate a PDF report.
+Version      : 2.1 (Alpha Vantage Edition)
+Description  : AI Investment Agent to compare stock performance using Alpha Vantage API and generate a PDF report.
 """
 
 import streamlit as st
@@ -12,23 +12,43 @@ import requests
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
+from dotenv import load_dotenv
+
+# Load API key
+load_dotenv()
+ALPHA_API_KEY = os.getenv("ALPHA_API_KEY")
 
 # Constants
-CACHE_FILE = "stock_cache_finnhub.json"
-from dotenv import load_dotenv
-load_dotenv()
+CACHE_FILE = "stock_cache.json"
 
-FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY")
+def run():
+    st.header("📊 Stock Comparison Tool (Alpha Vantage)")
+    st.caption("Compare stock performance using Alpha Vantage. Generate PDF reports.")
 
+    stock1 = st.text_input("Enter first stock symbol (e.g., AAPL)")
+    stock2 = st.text_input("Enter second stock symbol (e.g., MSFT)")
 
-# Streamlit UI Initialization
-st.title("AI Investment Agent 📊 (Finnhub Edition)")
-st.caption("Compare stock performance using financial data. Generates PDF reports.")
+    if stock1 and stock2:
+        data1 = get_stock_information(stock1.upper())
+        data2 = get_stock_information(stock2.upper())
 
-def get_stock_information(symbol, api_key):
-    """
-    Fetch stock data from Finnhub API.
-    """
+        if not data1 or not data2:
+            st.error("Failed to retrieve data for one or both stocks.")
+        else:
+            st.subheader(f"Comparison: {stock1.upper()} vs {stock2.upper()}")
+            st.write(data1)
+            st.write(data2)
+
+            pdf_path = create_pdf_report(data1, data2)
+            with open(pdf_path, "rb") as f:
+                st.download_button("Download PDF Report", f, file_name="stock_comparison_alpha.pdf")
+
+def get_stock_information(symbol):
+    """Fetch stock data from Alpha Vantage."""
+    if not ALPHA_API_KEY:
+        st.error("Alpha Vantage API key not found. Set it in the .env file.")
+        return None
+
     cache_data = {}
     if os.path.exists(CACHE_FILE):
         with open(CACHE_FILE, "r") as file:
@@ -41,26 +61,22 @@ def get_stock_information(symbol, api_key):
         return cache_data[symbol]
 
     try:
-        # Get stock quote
-        quote_url = f"https://finnhub.io/api/v1/quote?symbol={symbol}&token={api_key}"
-        profile_url = f"https://finnhub.io/api/v1/stock/profile2?symbol={symbol}&token={api_key}"
+        quote_url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={ALPHA_API_KEY}"
+        overview_url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}&apikey={ALPHA_API_KEY}"
 
-        quote_res = requests.get(quote_url)
-        profile_res = requests.get(profile_url)
+        quote_data = requests.get(quote_url).json().get("Global Quote", {})
+        overview_data = requests.get(overview_url).json()
 
-        quote_data = quote_res.json()
-        profile_data = profile_res.json()
-
-        if "name" not in profile_data:
+        if not quote_data or "01. symbol" not in quote_data:
             raise ValueError("Invalid stock symbol or no data available")
 
         stock_data = {
-            "Name": profile_data.get("name", "N/A"),
+            "Name": overview_data.get("Name", "N/A"),
             "Symbol": symbol,
-            "Market Cap": f"${profile_data.get('marketCapitalization', 'N/A')} Billion",
-            "Current Price": f"${quote_data.get('c', 'N/A')}",
-            "52-Week High": f"${quote_data.get('h', 'N/A')}",
-            "52-Week Low": f"${quote_data.get('l', 'N/A')}"
+            "Market Cap": f"${round(float(overview_data.get('MarketCapitalization', 0)) / 1e9, 2)} Billion",
+            "Current Price": f"${quote_data.get('05. price', 'N/A')}",
+            "52-Week High": f"${overview_data.get('52WeekHigh', 'N/A')}",
+            "52-Week Low": f"${overview_data.get('52WeekLow', 'N/A')}"
         }
 
         cache_data[symbol] = stock_data
@@ -73,14 +89,13 @@ def get_stock_information(symbol, api_key):
         st.error(f"Error fetching data for {symbol}: {e}")
         return None
 
-
-def create_pdf_report(stock1, stock2, filename="stock_comparison_finnhub.pdf"):
+def create_pdf_report(stock1, stock2, filename="stock_comparison_alpha.pdf"):
     file_path = os.path.join(os.getcwd(), filename)
     pdf = SimpleDocTemplate(file_path, pagesize=letter)
     styles = getSampleStyleSheet()
     story = []
 
-    story.append(Paragraph("Stock Comparison Report (Finnhub)", styles['h1']))
+    story.append(Paragraph("Stock Comparison Report (Alpha Vantage)", styles['h1']))
     story.append(Spacer(1, 12))
 
     for stock in [stock1, stock2]:
@@ -92,29 +107,3 @@ def create_pdf_report(stock1, stock2, filename="stock_comparison_finnhub.pdf"):
 
     pdf.build(story)
     return file_path
-
-#main app module
-def run_module_1():
-    """
-    Run the Stock Comparison Module.
-    """
-    if FINNHUB_API_KEY:
-        stock1 = st.text_input("Enter first stock symbol (e.g., AAPL)")
-        stock2 = st.text_input("Enter second stock symbol (e.g., MSFT)")
-
-        if stock1 and stock2:
-            data1 = get_stock_information(stock1.upper(), FINNHUB_API_KEY)
-            data2 = get_stock_information(stock2.upper(), FINNHUB_API_KEY)
-
-            if not data1 or not data2:
-                st.error("Failed to retrieve data for one or both stocks.")
-            else:
-                st.subheader(f"Comparison: {stock1.upper()} vs {stock2.upper()}")
-                st.write(data1)
-                st.write(data2)
-
-                pdf_path = create_pdf_report(data1, data2)
-                with open(pdf_path, "rb") as f:
-                    st.download_button("Download PDF Report", f, file_name="stock_comparison_finnhub.pdf")
-    else:
-        st.warning("Please enter your Finnhub API Key.")

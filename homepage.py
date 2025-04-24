@@ -1,8 +1,46 @@
 import streamlit as st
-import streamlit_extras
 from streamlit_extras.add_vertical_space import add_vertical_space
+import importlib
 
-# Dummy user database
+# Streamlit Page Settings
+st.set_page_config(page_title="SmartStock - AI Investment Agent", page_icon="📈", layout="centered")
+
+# Custom CSS
+st.markdown("""
+<style>
+body, .main {
+    background-color: #0e1117;
+    color: #ffffff;
+}
+
+input, textarea, select {
+    background-color: #1c1e26 !important;
+    color: #ffffff !important;
+    border: 1px solid #333 !important;
+    border-radius: 8px !important;
+    padding: 10px !important;
+}
+
+.stButton > button {
+    background-color: #22c55e !important;
+    color: white !important;
+    border-radius: 6px !important;
+    font-weight: bold !important;
+}
+
+.stButton > button:hover {
+    background-color: #16a34a !important;
+}
+
+.stTextInput > div > div > input {
+    background-color: #1c1e26 !important;
+    color: #ffffff !important;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+# Dummy DB in session state
 if "users" not in st.session_state:
     st.session_state.users = {
         "jeet": "password123",
@@ -10,47 +48,20 @@ if "users" not in st.session_state:
         "testuser": "test123"
     }
 
-# Check if user is already logged in
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "username" not in st.session_state:
+    st.session_state.username = ""
+if "current_page" not in st.session_state:
+    st.session_state.current_page = "home"
 
-# Streamlit Page Settings
-st.set_page_config(page_title="SmartStock - AI Investment Agent", page_icon="📈", layout="centered")
-
-# Custom CSS for UI
-st.markdown(
-    """
-   <style>
-    .main {
-        background-color: #f0f2f6;
-    }
-    .stButton>button {
-        background-color: #4CAF50;
-        color: white;
-        border-radius: 5px;
-        padding: 8px 16px;
-    }
-    .stButton>button:hover {
-        background-color: #45a049;
-    }
-    .stTextInput>div>div>input {
-        background-color: #ffffff;
-        padding: 8px;
-        border-radius: 5px;
-    }
-</style>
-
-    """,
-    unsafe_allow_html=True
-)
-
-# Page Switcher: Login or Sign Up
+# Sidebar switch
 page = st.sidebar.selectbox("🔐 Choose Page", ["Login", "Sign Up"])
 
+# If not logged in
 if not st.session_state.logged_in:
     st.title("🚀 Welcome to SmartStock 📈")
     st.caption("Your AI-Powered Stock Analysis & Chatbot")
-
     st.divider()
     add_vertical_space(2)
 
@@ -65,7 +76,6 @@ if not st.session_state.logged_in:
                 st.success("Logged in successfully! 🎯")
                 st.session_state.logged_in = True
                 st.session_state.username = username
-                st.experimental_rerun()
             else:
                 st.error("Invalid username or password! ❌")
 
@@ -87,22 +97,27 @@ if not st.session_state.logged_in:
                 st.session_state.users[new_username] = new_password
                 st.success("Account created successfully! 🎉 Please login now.")
 
+# After login
+
 else:
     st.title(f"👋 Welcome, {st.session_state.username}!")
     st.subheader("Choose a Module to Begin 📚")
 
-    col1, col2 = st.columns(2)
+    selected_option = st.radio("🔍 Select a Module", ["Home", "Stock Comparison", "Chatbot"], horizontal=True)
 
-    with col1:
-        if st.button("📈 Stock Comparison (Module 1)"):
-            st.switch_page("module1.py")
+    if selected_option == "Home":
+        st.info("Welcome to SmartStock. Please choose a module from above to proceed.")
+    
+    elif selected_option == "Stock Comparison":
+        mod1 = importlib.import_module("modules.module1")
+        mod1.run()  # call the run() function you’ll define inside module1.py
+    
+    elif selected_option == "Chatbot":
+        mod2 = importlib.import_module("modules.module2")
+        mod2.run()
 
-    with col2:
-        if st.button("🤖 Stock Chatbot (Module 2)"):
-            st.switch_page("module2.py")
-
-    add_vertical_space(2)
+    st.divider()
     if st.button("🚪 Logout"):
         st.session_state.logged_in = False
         st.success("Logged out successfully.")
-        st.experimental_rerun()
+        st.rerun()

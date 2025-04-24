@@ -43,7 +43,8 @@ input, textarea, select {
 # Dummy DB in session state
 if "users" not in st.session_state:
     st.session_state.users = {
-        "jeet": "password123",
+        "jeet": "jeet123",
+        "riya": "riya123",
         "admin": "admin123",
         "testuser": "test123"
     }

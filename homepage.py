@@ -1,6 +1,11 @@
 import streamlit as st
 from streamlit_extras.add_vertical_space import add_vertical_space
 import importlib
+import requests
+
+# URLs for signup and login (Django API endpoints)
+signup_url = "http://127.0.0.1:8000/api/signup/"
+login_url = "http://127.0.0.1:8000/api/login/"
 
 # Streamlit Page Settings
 st.set_page_config(page_title="SmartStock - AI Investment Agent", page_icon="📈", layout="centered")
@@ -39,16 +44,7 @@ input, textarea, select {
 </style>
 """, unsafe_allow_html=True)
 
-
-# Dummy DB in session state
-if "users" not in st.session_state:
-    st.session_state.users = {
-        "jeet": "jeet123",
-        "riya": "riya123",
-        "admin": "admin123",
-        "testuser": "test123"
-    }
-
+# Session State for authentication status
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
 if "username" not in st.session_state:
@@ -73,12 +69,15 @@ if not st.session_state.logged_in:
         password = st.text_input("🔑 Password", type="password")
 
         if st.button("Login 🔥"):
-            if username in st.session_state.users and st.session_state.users[username] == password:
+            # API call to login
+            login_data = {"username": username, "password": password}
+            response = requests.post(login_url, json=login_data)
+            if response.status_code == 200:
                 st.success("Logged in successfully! 🎯")
                 st.session_state.logged_in = True
                 st.session_state.username = username
             else:
-                st.error("Invalid username or password! ❌")
+                st.error(f"Login failed: {response.json().get('error', 'Unknown error')} ❌")
 
     elif page == "Sign Up":
         st.subheader("🆕 Create New Account")
@@ -88,18 +87,20 @@ if not st.session_state.logged_in:
         confirm_password = st.text_input("🔒 Confirm Password", type="password")
 
         if st.button("Sign Up 🚀"):
-            if new_username in st.session_state.users:
-                st.error("Username already exists! ❌")
-            elif new_password != confirm_password:
+            # API call to signup
+            if new_password != confirm_password:
                 st.error("Passwords do not match! ❌")
             elif new_username == "" or new_password == "":
                 st.error("Fields cannot be empty! ⚠️")
             else:
-                st.session_state.users[new_username] = new_password
-                st.success("Account created successfully! 🎉 Please login now.")
+                signup_data = {"username": new_username, "password": new_password, "email": f"{new_username}@example.com"}
+                response = requests.post(signup_url, json=signup_data)
+                if response.status_code == 201:
+                    st.success("Account created successfully! 🎉 Please login now.")
+                else:
+                    st.error(f"Signup failed: {response.json().get('error', 'Unknown error')} ❌")
 
 # After login
-
 else:
     st.title(f"👋 Welcome, {st.session_state.username}!")
     st.subheader("Choose a Module to Begin 📚")
